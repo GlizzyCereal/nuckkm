@@ -33,4 +33,25 @@ public class Health : MonoBehaviour
         OnDeath?.Invoke();
         Destroy(gameObject);
     }
+
+    // if the object is not the player, return -1
+    public float GetCurrentHealth()
+    {
+        if (IsPlayer())
+            return currentHealth;
+        return -1;
+    }
+
+    // if the object is not the player, return -1
+    public float GetMaxHealth()
+    {
+        if (IsPlayer())
+            return maxHealth;
+        return -1;
+    }
+
+    public bool IsPlayer()
+    {
+        return gameObject.CompareTag("Player");
+    }
 }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class Player : MonoBehaviour
 {
@@ -31,7 +32,19 @@ public class Player : MonoBehaviour
     [Header("Health Settings")]
     [SerializeField] private Image healthBarImage;   // Reference to UI Image for health bar
     [SerializeField] private float healthBarTransitionSpeed = 5f;
+    [SerializeField] private TMPro.TextMeshProUGUI healthText; // Reference to UI Text for health value
     private Health playerHealth;
+    private float targetHealthValue;
+    private float displayedHealth;
+
+
+    [Header("Hunger Settings")]
+    [SerializeField] private float maxHunger = 100f;
+    [SerializeField] private float currentHunger;
+    [SerializeField] private float hungerDepletionRate = 2f;
+    [SerializeField] private float hungerDamageRate = 5f;
+    [SerializeField] private Image hungerBarImage;
+    [SerializeField] private float hungerBarTransitionSpeed = 5f;
 
 
     private float jumpTimer;
@@ -44,13 +57,20 @@ public class Player : MonoBehaviour
     void Start()
     {
         currentSprintValue = maxSprintValue;
+
         rb = GetComponent<Rigidbody>();
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+
         Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
         audioSource = GetComponent<AudioSource>();
         
-        // Get the Health component on player
         playerHealth = GetComponent<Health>();
+        displayedHealth = playerHealth.GetCurrentHealth();
+        targetHealthValue = displayedHealth;
+
+        currentHunger = maxHunger;
         
         if (audioSource == null)
         {
@@ -66,6 +86,8 @@ public class Player : MonoBehaviour
         HandleSprint();
         UpdateSprintBar();
         UpdateHealthBar(); 
+        HandleHunger();
+        UpdateHungerBar();
     }
 
     void HandleMouseLook()
@@ -149,12 +171,41 @@ public class Player : MonoBehaviour
     {
         if (!healthBarImage || !playerHealth) return;
         
-        float normalizedHealth = playerHealth.currentHealth / playerHealth.maxHealth;
-        healthBarImage.fillAmount = Mathf.Lerp(
-            healthBarImage.fillAmount, 
-            normalizedHealth, 
-            Time.deltaTime * healthBarTransitionSpeed
+        targetHealthValue = playerHealth.GetCurrentHealth();
+        displayedHealth = Mathf.Lerp(displayedHealth, targetHealthValue, Time.deltaTime * healthBarTransitionSpeed);
+        
+        float currentMaxHealth = playerHealth.GetMaxHealth();
+        float normalizedHealth = displayedHealth / currentMaxHealth;
+        
+        healthBarImage.fillAmount = normalizedHealth;
+        healthText.text = $"{Mathf.Round(displayedHealth)}/{currentMaxHealth}";
+    }
+
+    void HandleHunger()
+    {
+        currentHunger = Mathf.Max(0, currentHunger - hungerDepletionRate * Time.deltaTime);
+        
+        if (currentHunger <= 0)
+        {
+            playerHealth.TakeDamage(hungerDamageRate * Time.deltaTime);
+        }
+    }
+
+    void UpdateHungerBar()
+    {
+        if (hungerBarImage == null) return;
+
+        float normalizedHunger = currentHunger / maxHunger;
+        hungerBarImage.fillAmount = Mathf.Lerp(
+            hungerBarImage.fillAmount,
+            normalizedHunger,
+            Time.deltaTime * hungerBarTransitionSpeed
         );
+    }
+
+    public void ConsumeFood(float amount)
+    {
+        currentHunger = Mathf.Clamp(currentHunger + amount, 0, maxHunger);
     }
 
     void OnCollisionEnter(Collision collision)
