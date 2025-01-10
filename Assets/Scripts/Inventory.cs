@@ -1,50 +1,25 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 public class Inventory : MonoBehaviour
 {
-    [System.Serializable]
-    public class InventoryItem
+    public InventorySlot[] slots;
+    
+    void Start()
     {
-        public string itemName;
-        public int quantity;
+        slots = GetComponentsInChildren<InventorySlot>();
     }
 
-    public List<InventoryItem> items = new List<InventoryItem>();
-
-    public void AddItem(string name, int quantity)
+    public bool AddItem(Item item)
     {
-        InventoryItem existingItem = items.Find(i => i.itemName == name);
-        if (existingItem != null)
+        // Find first empty slot
+        for(int i = 0; i < slots.Length; i++)
         {
-            existingItem.quantity += quantity;
-        }
-        else
-        {
-            InventoryItem newItem = new InventoryItem
+            if(slots[i].item == null)
             {
-                itemName = name,
-                quantity = quantity
-            };
-            items.Add(newItem);
+                slots[i].AddItem(item);
+                return true;
+            }
         }
-    }
-
-    public void RemoveItem(string name, int quantity)
-    {
-        InventoryItem item = items.Find(i => i.itemName == name);
-        if (item == null) return;
-
-        item.quantity -= quantity;
-        if (item.quantity <= 0)
-        {
-            items.Remove(item);
-        }
-    }
-
-    public int GetItemQuantity(string name)
-    {
-        InventoryItem item = items.Find(i => i.itemName == name);
-        return item != null ? item.quantity : 0;
+        return false; // Inventory is full
     }
 }

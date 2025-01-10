@@ -47,6 +47,13 @@ public class Player : MonoBehaviour
     [SerializeField] private float hungerBarTransitionSpeed = 5f;
 
 
+    [Header("Inventory")]
+    [SerializeField] private GameObject inventoryUI;
+    [SerializeField] private Inventory inventory;
+    [SerializeField] private KeyCode inventoryKey = KeyCode.I;
+    private bool isInventoryOpen = false;
+
+
     private float jumpTimer;
     private float targetSprintSpeed;
     private Rigidbody rb;
@@ -56,6 +63,8 @@ public class Player : MonoBehaviour
 
     void Start()
     {
+        inventoryUI.SetActive(isInventoryOpen);
+
         currentSprintValue = maxSprintValue;
 
         rb = GetComponent<Rigidbody>();
@@ -88,6 +97,10 @@ public class Player : MonoBehaviour
         UpdateHealthBar(); 
         HandleHunger();
         UpdateHungerBar();
+        if (Input.GetKeyDown(inventoryKey))
+        {
+            ToggleInventory();
+        }
     }
 
     void HandleMouseLook()
@@ -206,6 +219,23 @@ public class Player : MonoBehaviour
     public void ConsumeFood(float amount)
     {
         currentHunger = Mathf.Clamp(currentHunger + amount, 0, maxHunger);
+    }
+
+    private void ToggleInventory()
+    {
+        isInventoryOpen = !isInventoryOpen;
+        inventoryUI.SetActive(isInventoryOpen);
+
+        if (isInventoryOpen)
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+        else 
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
     }
 
     void OnCollisionEnter(Collision collision)
