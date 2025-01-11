@@ -9,34 +9,37 @@ public class Player : MonoBehaviour
     public float jumpForce = 5f;
     public float mouseSensitivity = 1000f;
 
+    private Camera mainCamera;
+    private Rigidbody rb;
+    private float xRotation = 0f;
+    private bool isGrounded = true;
     
     [Header("Sprint Settings")]
     public float maxSprintValue = 100f;
     public float currentSprintValue;
     public float sprintDepletionRate = 20f;
-    public float jumpSprintCost = 10f;
     public float sprintRegenerationRate = 10f;
     public Image sprintBarImage;
     [SerializeField] private float sprintTransitionSpeed = 5f;
-
+    private bool isSprinting = false;
+    private float targetSprintSpeed;
 
     [Header("Jump settings")]
     [SerializeField] private float jumpCooldown = 0.5f;
-
+    public float jumpSprintCost = 10f;
+    private float jumpTimer;
 
     [Header("Audio")]
     [SerializeField] private AudioClip sprintSound;
     private AudioSource audioSource;
 
-
     [Header("Health Settings")]
-    [SerializeField] private Image healthBarImage;   // Reference to UI Image for health bar
+    [SerializeField] private Image healthBarImage;
     [SerializeField] private float healthBarTransitionSpeed = 5f;
-    [SerializeField] private TMPro.TextMeshProUGUI healthText; // Reference to UI Text for health value
+    [SerializeField] private TextMeshProUGUI healthText;
     private Health playerHealth;
     private float targetHealthValue;
     private float displayedHealth;
-
 
     [Header("Hunger Settings")]
     [SerializeField] private float maxHunger = 100f;
@@ -46,210 +49,173 @@ public class Player : MonoBehaviour
     [SerializeField] private Image hungerBarImage;
     [SerializeField] private float hungerBarTransitionSpeed = 5f;
 
-
+    /*
     [Header("Inventory")]
     [SerializeField] private GameObject inventoryUI;
     [SerializeField] private KeyCode inventoryKey = KeyCode.I;
     private bool isInventoryOpen = false;
+    */
 
-
-    private float jumpTimer;
-    private float targetSprintSpeed;
-    private Rigidbody rb;
-    private float xRotation = 0f;
-    private bool isGrounded = true;
-    private bool isSprinting = false;
-
-    void Start()
+    private void Start()
     {
-        inventoryUI.SetActive(isInventoryOpen);
-
-        currentSprintValue = maxSprintValue;
-
+        mainCamera = Camera.main;
         rb = GetComponent<Rigidbody>();
-        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        audioSource = GetComponent<AudioSource>();
+        playerHealth = GetComponent<Health>();
 
         Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-        audioSource = GetComponent<AudioSource>();
-        
-        playerHealth = GetComponent<Health>();
-        displayedHealth = playerHealth.GetCurrentHealth();
-        targetHealthValue = displayedHealth;
-
+        currentSprintValue = maxSprintValue;
         currentHunger = maxHunger;
-        
-        if (audioSource == null)
-        {
-            Debug.LogError("AudioSource component missing from Player!");
-        }
+
+        if (mainCamera == null)
+            Debug.LogError("Main camera not found!");
     }
 
-    void Update()
+    private void Update()
     {
         HandleMouseLook();
-        HandleMovement();
         HandleJump();
         HandleSprint();
-        UpdateSprintBar();
-        UpdateHealthBar(); 
+        UpdateUI();
         HandleHunger();
-        UpdateHungerBar();
-        if (Input.GetKeyDown(inventoryKey))
-        {
-            ToggleInventory();
-        }
+        //HandleInventory();
     }
 
-    void HandleMouseLook()
+    private void FixedUpdate()
+    {
+        HandleMovement();
+    }
+
+    private void HandleMovement()
+    {
+        float moveX = Input.GetAxis("Horizontal");
+        float moveZ = Input.GetAxis("Vertical");
+
+        Vector3 move = transform.right * moveX + transform.forward * moveZ;
+        
+        float currentSpeed = isSprinting ? Mathf.Lerp(moveSpeed, targetSprintSpeed, Time.deltaTime * sprintTransitionSpeed) : moveSpeed;
+        rb.MovePosition(rb.position + move * currentSpeed * Time.fixedDeltaTime);
+    }
+
+    private void HandleMouseLook()
     {
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, -90f, 90f);
-        Camera.main.transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+
+        mainCamera.transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         transform.Rotate(Vector3.up * mouseX);
     }
 
-    void HandleMovement()
+    private void HandleJump()
     {
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
-        float currentSpeed = isSprinting ? sprintSpeed : moveSpeed;
-        
-        Vector3 direction = (transform.right * horizontal + transform.forward * vertical) * currentSpeed;
-        Vector3 newPosition = rb.position + direction * Time.deltaTime;
-        rb.MovePosition(newPosition);
-    }
+        jumpTimer -= Time.deltaTime;
 
-    void HandleJump()
-    {
-        if (jumpTimer > 0)
-        {
-            jumpTimer -= Time.deltaTime;
-            return;
-        }
-
-        if (Input.GetButtonDown("Jump") && isGrounded && currentSprintValue >= jumpSprintCost)
+        if (Input.GetButtonDown("Jump") && isGrounded && jumpTimer <= 0)
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
             isGrounded = false;
-            currentSprintValue = Mathf.Max(0, currentSprintValue - jumpSprintCost);
             jumpTimer = jumpCooldown;
+
+            if (isSprinting)
+            {
+                currentSprintValue -= jumpSprintCost;
+            }
         }
     }
 
-    void HandleSprint()
+    private void HandleSprint()
     {
-        bool wantsToSprint = Input.GetKey(KeyCode.LeftShift) && currentSprintValue > 0;
-        targetSprintSpeed = wantsToSprint ? 1f : 0f;
-        
-        if (wantsToSprint)
+        if (Input.GetKeyDown(KeyCode.LeftShift) && currentSprintValue > 0)
         {
             isSprinting = true;
-            currentSprintValue = Mathf.Max(0, currentSprintValue - sprintDepletionRate * Time.deltaTime);
-            
-            if (audioSource != null && sprintSound != null && !audioSource.isPlaying)
-            {
+            targetSprintSpeed = sprintSpeed;
+            if (audioSource && sprintSound)
                 audioSource.PlayOneShot(sprintSound);
-            }
         }
-        else
+
+        if (Input.GetKeyUp(KeyCode.LeftShift) || currentSprintValue <= 0)
         {
             isSprinting = false;
-            if (currentSprintValue < maxSprintValue)
-            {
-                float regeneration = sprintRegenerationRate * Time.deltaTime;
-                currentSprintValue = Mathf.Clamp(currentSprintValue + regeneration, 0f, maxSprintValue);
-            }
+            targetSprintSpeed = moveSpeed;
+        }
+
+        if (isSprinting && (Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0))
+        {
+            currentSprintValue -= sprintDepletionRate * Time.deltaTime;
+            currentSprintValue = Mathf.Max(0, currentSprintValue);
+        }
+        else if (!isSprinting && currentSprintValue < maxSprintValue)
+        {
+            currentSprintValue += sprintRegenerationRate * Time.deltaTime;
+            currentSprintValue = Mathf.Min(maxSprintValue, currentSprintValue);
         }
     }
 
-    void UpdateSprintBar()
+    private void HandleHunger()
     {
-        if (sprintBarImage == null) {
-            Debug.LogError("SprintBarImage not assigned to Player script!");
-            return;
-        } 
+        currentHunger -= hungerDepletionRate * Time.deltaTime;
+        currentHunger = Mathf.Max(0, currentHunger);
 
-        // Smooth sprint bar transition
-        float targetFill = currentSprintValue / maxSprintValue;
-        sprintBarImage.fillAmount = Mathf.Lerp(sprintBarImage.fillAmount, targetFill, Time.deltaTime * sprintTransitionSpeed);
-    }
-
-    private void UpdateHealthBar()
-    {
-        if (!healthBarImage || !playerHealth) return;
-        
-        targetHealthValue = playerHealth.GetCurrentHealth();
-        displayedHealth = Mathf.Lerp(displayedHealth, targetHealthValue, Time.deltaTime * healthBarTransitionSpeed);
-        
-        float currentMaxHealth = playerHealth.GetMaxHealth();
-        float normalizedHealth = displayedHealth / currentMaxHealth;
-        
-        healthBarImage.fillAmount = normalizedHealth;
-        healthText.text = $"{Mathf.Round(displayedHealth)}/{currentMaxHealth}";
-    }
-
-    void HandleHunger()
-    {
-        currentHunger = Mathf.Max(0, currentHunger - hungerDepletionRate * Time.deltaTime);
-        
         if (currentHunger <= 0)
         {
             playerHealth.TakeDamage(hungerDamageRate * Time.deltaTime);
         }
     }
 
-    void UpdateHungerBar()
+    private void UpdateUI()
     {
-        if (hungerBarImage == null) return;
-
-        float normalizedHunger = currentHunger / maxHunger;
-        hungerBarImage.fillAmount = Mathf.Lerp(
-            hungerBarImage.fillAmount,
-            normalizedHunger,
-            Time.deltaTime * hungerBarTransitionSpeed
-        );
-    }
-
-    public void ConsumeFood(float amount)
-    {
-        currentHunger = Mathf.Clamp(currentHunger + amount, 0, maxHunger);
-    }
-
-    private void ToggleInventory()
-    {
-        isInventoryOpen = !isInventoryOpen;
-        inventoryUI.SetActive(isInventoryOpen);
-
-        if (isInventoryOpen)
+        // Update sprint bar
+        if (sprintBarImage != null)
         {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            sprintBarImage.fillAmount = currentSprintValue / maxSprintValue;
         }
-        else 
+
+        // Update hunger bar
+        if (hungerBarImage != null)
         {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            hungerBarImage.fillAmount = Mathf.Lerp(hungerBarImage.fillAmount, currentHunger / maxHunger, Time.deltaTime * hungerBarTransitionSpeed);
+        }
+
+        // Update health bar and text
+        if (playerHealth != null)
+        {
+            targetHealthValue = playerHealth.GetCurrentHealth();
+            displayedHealth = Mathf.Lerp(displayedHealth, targetHealthValue, Time.deltaTime * healthBarTransitionSpeed);
+        
+            float currentMaxHealth = playerHealth.GetMaxHealth();
+            float normalizedHealth = displayedHealth / currentMaxHealth;
+        
+            healthBarImage.fillAmount = normalizedHealth;
+            healthText.text = $"{Mathf.Round(displayedHealth)}/{currentMaxHealth}";
         }
     }
 
-    void OnCollisionEnter(Collision collision)
+    private void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.CompareTag("Ground"))
         {
-            // Check contact normal to ensure we're landing on top of the ground
-            foreach (ContactPoint contact in collision.contacts)
-            {
-                if (Vector3.Dot(contact.normal, Vector3.up) > 0.7f)
-                {
-                    isGrounded = true;
-                    break;
-                }
-            }
+            isGrounded = true;
         }
+    }
+
+    /*
+    private void HandleInventory()
+    {
+        if (Input.GetKeyDown(inventoryKey))
+        {
+            isInventoryOpen = !isInventoryOpen;
+            inventoryUI.SetActive(isInventoryOpen);
+            Cursor.lockState = isInventoryOpen ? CursorLockMode.None : CursorLockMode.Locked;
+            Cursor.visible = isInventoryOpen;
+        }
+    }
+    */
+
+    public void AddHunger(float amount)
+    {
+        currentHunger = Mathf.Min(currentHunger + amount, maxHunger);
     }
 }
