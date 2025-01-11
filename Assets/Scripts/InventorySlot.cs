@@ -1,25 +1,39 @@
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class InventorySlot : MonoBehaviour
+public class InventorySlot : MonoBehaviour, IPointerClickHandler
 {
-    public Image icon;
-    public Item item;
-    public int amount;
-    
-    public void AddItem(Item newItem, int count = 1)
+    public InventoryItem MyItem { get; set; }
+    public SlotTag myTag;
+
+    public void OnPointerClick(PointerEventData eventData)
     {
-        item = newItem;
-        amount = count;
-        icon.sprite = newItem.itemIcon;
-        icon.enabled = true;
+        if (eventData.button == PointerEventData.InputButton.Left)
+        {
+            if (Inventory.carriedItem == null)
+                return;
+            
+            if (myTag != SlotTag.None && Inventory.carriedItem.MyItem.itemTag != myTag)
+                return;
+            
+            SetItem(Inventory.carriedItem);
+        }
     }
 
-    public void ClearSlot()
+    public void SetItem(InventoryItem item)
     {
-        item = null;
-        amount = 0;
-        icon.sprite = null;
-        icon.enabled = false;
+        Inventory.carriedItem = null;
+
+        item.activeSlot.MyItem = null;
+
+        MyItem = item;
+        MyItem.activeSlot = this;
+        MyItem.transform.SetParent(transform);
+        MyItem.canvasGroup.blocksRaycasts = true;
+
+        if(myTag != SlotTag.None)
+            Inventory.Singleton.EquipEquipment(myTag, MyItem);
     }
 }

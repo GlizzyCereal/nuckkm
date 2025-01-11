@@ -49,7 +49,6 @@ public class Player : MonoBehaviour
 
     [Header("Inventory")]
     [SerializeField] private GameObject inventoryUI;
-    [SerializeField] private Inventory inventory;
     [SerializeField] private KeyCode inventoryKey = KeyCode.I;
     private bool isInventoryOpen = false;
 

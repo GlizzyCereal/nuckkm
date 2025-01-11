@@ -1,12 +1,13 @@
 using UnityEngine;
 
-[System.Serializable]
-public class Item
+public enum SlotTag { None, Head, Chest, Legs, Feet }
+
+[CreateAssetMenu(menuName = "Scriptable Objects/Item")]
+public class Item : ScriptableObject
 {
-    public string itemName;
-    public Sprite itemIcon;
-    public bool isStackable;
-    public int maxStack = 1;
-    [TextArea]
-    public string description;
+    public Sprite sprite;
+    public SlotTag itemTag;
+
+    [Header("If the item can be equipped")]
+    public GameObject equipmentPrefab;
 }
