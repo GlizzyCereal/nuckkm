@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 5d987af713e6ff64b90594b74f6ee0df
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 283656
+  packageName: Inventory Framework Lite
+  packageVersion: 1.2
+  assetPath: Assets/InventorySystem/GDS/Core/Sample/InventoryExt.cs
+  uploadId: 712931

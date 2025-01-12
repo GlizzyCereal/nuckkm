@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ccd1c292706f81d40a3448bb1c58554b
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 283656
+  packageName: Inventory Framework Lite
+  packageVersion: 1.2
+  assetPath: Assets/InventorySystem/README.md
+  uploadId: 712931

@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: da2ab5c47abcd844192ebd892203f757
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 283656
+  packageName: Inventory Framework Lite
+  packageVersion: 1.2
+  assetPath: Assets/InventorySystem/GDS/Demos/Basic/Views/BasicListBagView.cs
+  uploadId: 712931
