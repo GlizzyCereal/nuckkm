@@ -63,7 +63,7 @@ public class Player : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         playerHealth = GetComponent<Health>();
 
-        //Cursor.lockState = CursorLockMode.Locked;
+        Cursor.lockState = CursorLockMode.Locked;
         currentSprintValue = maxSprintValue;
         currentHunger = maxHunger;
 
